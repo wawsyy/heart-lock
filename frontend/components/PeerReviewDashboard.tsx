@@ -21,16 +21,16 @@ type ContractInfo = {
 };
 
 const HARDHAT_RPC_URL = process.env.NEXT_PUBLIC_HARDHAT_RPC_URL ?? "http://localhost:8545";
+const DEFAULT_CHAIN_ID = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN_ID ?? "11155111");
 
 function getContractByChainId(chainId: number | undefined): ContractInfo {
-  if (!chainId) {
-    return { abi: EncryptedPeerReviewABI.abi };
-  }
+  const resolvedChainId = chainId ?? DEFAULT_CHAIN_ID;
 
-  const entry = EncryptedPeerReviewAddresses[chainId.toString() as keyof typeof EncryptedPeerReviewAddresses];
+  const entry =
+    EncryptedPeerReviewAddresses[resolvedChainId.toString() as keyof typeof EncryptedPeerReviewAddresses];
 
   if (!entry || entry.address === ethers.ZeroAddress) {
-    return { abi: EncryptedPeerReviewABI.abi, chainId };
+    return { abi: EncryptedPeerReviewABI.abi, chainId: resolvedChainId };
   }
 
   return {
@@ -55,7 +55,7 @@ async function buildSigner(
     account: { address: string };
   };
 
-  const chainId = Number(client.chain?.id ?? fallbackChainId ?? 31337);
+  const chainId = Number(client.chain?.id ?? fallbackChainId ?? DEFAULT_CHAIN_ID);
   const provider = new ethers.BrowserProvider(
     client.transport as ethers.Eip1193Provider,
     chainId,
@@ -100,12 +100,17 @@ export const PeerReviewDashboard = () => {
     error: fhevmError,
   } = useFhevm({
     provider: fhevmProvider,
-    chainId: chainId ? Number(chainId) : undefined,
+    chainId: chainId ? Number(chainId) : DEFAULT_CHAIN_ID,
     initialMockChains: { 31337: HARDHAT_RPC_URL },
     enabled: Boolean(fhevmProvider),
   });
 
-  const contractInfo = useMemo(() => getContractByChainId(chainId ? Number(chainId) : undefined), [chainId]);
+  const effectiveChainId = useMemo(
+    () => (chainId ? Number(chainId) : DEFAULT_CHAIN_ID),
+    [chainId],
+  );
+
+  const contractInfo = useMemo(() => getContractByChainId(effectiveChainId), [effectiveChainId]);
 
   const contractRunner: ethers.ContractRunner | undefined = useMemo(() => {
     if (signer) {
@@ -344,7 +349,7 @@ export const PeerReviewDashboard = () => {
   const isContractDeployed = Boolean(contractInfo.address && contractInfo.address !== ethers.ZeroAddress);
 
   if (!isContractDeployed) {
-    return errorNotDeployed(chainId ? Number(chainId) : undefined);
+    return errorNotDeployed(effectiveChainId);
   }
 
   return (
