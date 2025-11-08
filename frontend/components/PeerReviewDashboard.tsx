@@ -42,16 +42,25 @@ function getContractByChainId(chainId: number | undefined): ContractInfo {
 }
 
 async function buildSigner(
-  walletClient: ReturnType<typeof useWalletClient>["data"],
+  walletClient: unknown,
   fallbackChainId?: number,
 ): Promise<{ provider: ethers.BrowserProvider; signer: ethers.JsonRpcSigner } | undefined> {
   if (!walletClient) {
     return undefined;
   }
 
-  const chainId = Number(walletClient.chain?.id ?? fallbackChainId ?? 31337);
-  const provider = new ethers.BrowserProvider(walletClient.transport, chainId);
-  const signer = await provider.getSigner(walletClient.account.address);
+  const client = walletClient as {
+    chain?: { id: number | string };
+    transport: ethers.Eip1193Provider | string;
+    account: { address: string };
+  };
+
+  const chainId = Number(client.chain?.id ?? fallbackChainId ?? 31337);
+  const provider = new ethers.BrowserProvider(
+    client.transport as ethers.Eip1193Provider,
+    chainId,
+  );
+  const signer = await provider.getSigner(client.account.address);
   return { provider, signer };
 }
 
