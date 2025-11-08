@@ -29,8 +29,6 @@ const projectId =
 const hardhatRpcUrl = process.env.NEXT_PUBLIC_HARDHAT_RPC_URL ?? "http://localhost:8545";
 const sepoliaRpcUrl = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL;
 
-const chains: readonly [typeof hardhat, typeof sepolia] = [hardhat, sepolia];
-
 const connectors = connectorsForWallets(
   [
     {
@@ -46,7 +44,7 @@ const connectors = connectorsForWallets(
 
 const wagmiConfig = createConfig({
   connectors,
-  chains,
+  chains: [hardhat, sepolia] as const,
   transports: {
     [hardhat.id]: http(hardhatRpcUrl),
     [sepolia.id]: http(sepoliaRpcUrl ?? "https://rpc.sepolia.org"),
